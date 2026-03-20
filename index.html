@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>獎金計算器</title>
+  <style>
+    :root{
+      --left-bg:#fbfdff;
+      --left-text:#0b2540;
+      --muted:#6b7280;
+      --accent:#2563eb;
+      --right-card:#071028;
+      --right-text:#e6eef8;
+      --glass-border: rgba(2,6,23,0.06);
+      --radius:12px;
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#f3f6fb 0%,#eef4fb 60%); color:var(--left-text); font-family:"Noto Sans TC", "Helvetica Neue", Arial, sans-serif;}
+    .wrap{max-width:1100px;margin:28px auto;padding:20px;border-radius:14px;}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#2b6cff);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+    h1{font-size:18px;margin:0;color:var(--left-text)} p{margin:0;color:var(--muted);font-size:13px}
+
+    .grid{display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start;}
+
+    .card{
+      background:var(--left-bg); color:var(--left-text);
+      border-radius:12px;padding:18px;border:1px solid var(--glass-border);
+      box-shadow: 0 22px 48px rgba(11,26,48,0.12), 0 6px 18px rgba(11,26,48,0.06);
+    }
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    .field{display:flex;flex-direction:column}
+    input[type="text"], select {
+      background:#fff;border:1px solid rgba(11,26,48,0.06);color:var(--left-text);
+      padding:10px;border-radius:8px;font-size:14px;outline:none;
+    }
+    input[readonly]{background:transparent;color:#334155}
+    input:focus, select:focus{box-shadow:0 8px 24px rgba(37,99,235,0.08); transform:translateY(-1px)}
+
+    .full{grid-column:1 / -1}
+    .muted{font-size:12px;color:var(--muted);margin-top:6px}
+
+    .badge {display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;margin-left:8px;}
+    .req {background:#ffecec;color:#b91c1c}
+    .opt {background:#eef6ff;color:#0b69ff}
+
+    .group {
+      background:linear-gradient(180deg, rgba(37,99,235,0.04), rgba(255,255,255,0.6));
+      border:1px solid rgba(37,99,235,0.08); padding:12px; border-radius:10px;
+      display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; align-items:end;
+      grid-column:1 / -1;
+    }
+    .group label{color:#0b2540;font-weight:700}
+    .group .hint{grid-column:1 / -1;color:#0b2540;background:rgba(255,255,255,0.95);padding:8px;border-radius:8px;border:1px solid rgba(37,99,235,0.06);font-size:13px}
+
+    .summary{display:flex;flex-direction:column;gap:12px;}
+    .tile{
+      padding:14px;border-radius:12px;background:linear-gradient(180deg,var(--right-card), #071a2b);
+      border:1px solid rgba(255,255,255,0.04); color:var(--right-text);
+      box-shadow: 0 8px 20px rgba(2,6,23,0.45);
+    }
+    .tile h3{margin:0;font-size:13px;color:#9fb7d9}
+    .tile .value{font-size:20px;margin-top:8px;color:#fff;font-weight:700}
+    .value.small{font-size:14px;font-weight:600;color:#cfe6ff}
+
+    .actions{display:flex;gap:10px;margin-top:12px}
+    button{padding:10px 14px;border-radius:10px;border:0;font-weight:700;cursor:pointer;color:#fff;background:linear-gradient(90deg,var(--accent),#2b6cff)}
+    button.secondary{background:transparent;color:var(--accent);border:1px solid rgba(37,99,235,0.12)}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:right}
+
+    @media (max-width:980px){ .grid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+  <div class="wrap" role="main" aria-labelledby="title">
+    <header>
+      <div class="logo">獎</div>
+      <div>
+        <h1 id="title">獎金計算器</h1>
+        <p style="color:var(--muted);margin-top:6px">左側為輸入區，右側為結果摘要。</p>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="card" aria-label="輸入欄位">
+        <form id="calcForm" onsubmit="return false;">
+          <div class="form-grid">
+
+            <div class="field full">
+              <label><strong>訂單總金額</strong> (A)
+                <span class="badge req">必填</span>
+              </label>
+              <input id="A" type="text" inputmode="numeric" placeholder="範例：12000" />
+              <div class="muted">說明：訂單整體金額。</div>
+            </div>
+
+            <div class="field">
+              <label><strong>獎金計算類別</strong> (B)
+                <span class="badge req">必填</span>
+              </label>
+              <select id="B" aria-label="獎金計算類別">
+                <option value="">-- 選擇 --</option>
+                <option value="1.自開發">1.自開發</option>
+                <option value="2.公司單">2.公司單</option>
+                <option value="3.薩爾文(公司單)">3.薩爾文(公司單)</option>
+                <option value="4.電訪中心(公司單)">4.電訪中心(公司單)</option>
+                <option value="5.電訪中心-薩爾文(公司單)">5.電訪中心-薩爾文(公司單)</option>
+              </select>
+              <div class="muted">說明：選擇對應的獎金計算類別。</div>
+            </div>
+
+            <div class="group" aria-label="分期區塊 (C D E)">
+              <div class="field">
+                <label>訂單主產品的分期總額 (C)
+                  <span class="badge opt">分期時填寫</span>
+                </label>
+                <input id="C" type="text" inputmode="numeric" placeholder="範例：10000" />
+              </div>
+
+              <div class="field">
+                <label>萬試通表訂售價(分期總價) (D)
+                  <span class="badge opt">分期時填寫</span>
+                </label>
+                <input id="D" type="text" inputmode="numeric" placeholder="範例：12000" />
+              </div>
+
+              <div class="field">
+                <label>折扣後對應的現金價 (E)
+                  <span class="badge opt">系統計算</span>
+                </label>
+                <input id="E" type="text" readonly placeholder="系統在 C 與 D 都有值時計算" />
+              </div>
+
+              <div class="hint">提示：若訂單為分期，請填寫 C 與 D；系統會自動以 <strong>E = (C / D) × F</strong> 計算折扣後現金價。</div>
+            </div>
+
+            <div class="field">
+              <label><strong>萬試通產品價目表表訂售價(主產品的員工優惠價)</strong> (F)
+                <span class="badge req">必填</span>
+              </label>
+              <input id="F" type="text" inputmode="numeric" placeholder="範例：9000" />
+              <div class="muted">說明：主產品的員工優惠價。</div>
+            </div>
+
+            <div class="field">
+              <label><strong>加購非主產品的硬體配件及服務</strong> (G)
+                <span class="badge opt">選填</span>
+              </label>
+              <input id="G" type="text" inputmode="numeric" placeholder="範例：500" />
+            </div>
+
+            <div class="field">
+              <label><strong>加購非主產品的硬體配件及服務不列入計算</strong> (H)
+                <span class="badge opt">可為負值</span>
+              </label>
+              <input id="H" type="text" inputmode="numeric" placeholder="範例：-200" />
+              <div class="muted">說明：可輸入負值表示折讓或回扣。</div>
+            </div>
+
+            <div class="field">
+              <label><strong>扣除贈送(硬體配件及服務)</strong> (I)
+                <span class="badge opt">可為負值</span>
+              </label>
+              <input id="I" type="text" inputmode="numeric" placeholder="範例：-150" />
+              <div class="muted">說明：贈品扣除金額。</div>
+            </div>
+
+            <div class="field">
+              <label><strong>扣除優惠折扣</strong> (J) — 系統計算</label>
+              <input id="J" type="text" readonly placeholder="系統自動計算" />
+            </div>
+
+            <div class="field">
+              <label><strong>溢收可抵扣贈品金額(上限)</strong> (K)
+                <span class="badge opt">選填</span>
+              </label>
+              <input id="K" type="text" inputmode="numeric" placeholder="範例：100" />
+            </div>
+
+            <div class="field full">
+              <label class="muted">輸入完畢後按「計算」或按 Enter。</label>
+            </div>
+
+          </div>
+
+          <div class="actions">
+            <button id="calcBtn" type="button">計算</button>
+            <button id="resetBtn" type="button" class="secondary">清除</button>
+          </div>
+        </form>
+      </section>
+
+      <aside class="summary" aria-label="計算結果">
+        <div class="tile">
+          <h3>合計 (P)</h3>
+          <div id="L_val" class="value">—</div>
+        </div>
+
+        <div class="tile">
+          <h3>依折扣比率扣價差 (M)</h3>
+          <div id="M_val" class="value small">—</div>
+        </div>
+
+        <div class="tile">
+          <h3>(折數)</h3>
+          <div id="N_val" class="value small">—</div>
+        </div>
+
+        <div class="tile">
+          <h3>基本獎金比例 (O)</h3>
+          <div id="O_val" class="value small">—</div>
+        </div>
+
+        <div class="tile">
+          <h3>總業績獎金 (P)</h3>
+          <div id="P_val" class="value" style="color:#7be0a6">—</div>
+        </div>
+      </aside>
+    </div>
+
+    <footer>版權 &middot; 公司內部使用</footer>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+
+    function parseInteger(value, allowNegative=false) {
+      if (value === null || value === undefined) return NaN;
+      let s = String(value).trim().replace(/,/g,'');
+      if (s === '' || s === '-') return NaN;
+      if (allowNegative) {
+        const neg = s.startsWith('-');
+        s = s.replace(/[^\d]/g,'');
+        if (s === '') return NaN;
+        const n = Math.trunc(Number(s));
+        return neg ? -n : n;
+      } else {
+        s = s.replace(/[^\d]/g,'');
+        if (s === '') return NaN;
+        return Math.trunc(Number(s));
+      }
+    }
+
+    function fmtInt(v) {
+      if (v === "" || v === null || v === undefined || isNaN(Number(v))) return "";
+      return String(Math.round(Number(v)));
+    }
+
+    function calcOnce() {
+      const A = parseInteger($('A').value, false);
+      const B = $('B').value;
+      const C = parseInteger($('C').value, false);
+      const D = parseInteger($('D').value, false);
+      const F = parseInteger($('F').value, false);
+      const G = parseInteger($('G').value, false);
+      const H = parseInteger($('H').value, true);
+      const I = parseInteger($('I').value, true);
+      const K = parseInteger($('K').value, false);
+
+      let E_val = "";
+      if (!isNaN(C) && !isNaN(D) && D !== 0 && !isNaN(F)) {
+        const tmp = (C / D) * F;
+        E_val = isFinite(tmp) ? Math.round(tmp) : "";
+      } else {
+        E_val = "";
+      }
+
+      let J_val = "";
+      const E_num = (E_val === "" ? NaN : Number(E_val));
+      if (!isNaN(C) && C > 0) {
+        if (!isNaN(E_num) && !isNaN(F)) {
+          J_val = (E_num - F) > 0 ? 0 : (E_num - F);
+        } else {
+          const tmp = (!isNaN(A) ? A : 0) - (!isNaN(G) ? G : 0) - (!isNaN(F) ? F : 0);
+          J_val = tmp > 0 ? 0 : tmp;
+        }
+      } else {
+        const tmp = (!isNaN(A) ? A : 0) - (!isNaN(G) ? G : 0) - (!isNaN(F) ? F : 0);
+        J_val = tmp > 0 ? 0 : tmp;
+      }
+
+      const J_num = isNaN(Number(J_val)) ? 0 : Math.round(Number(J_val));
+      const L_val = (isNaN(F) ? 0 : F) + (isNaN(G) ? 0 : G) + (isNaN(H) ? 0 : H) + (isNaN(I) ? 0 : I) + J_num + (isNaN(K) ? 0 : K);
+
+      let M_val = 0;
+      if (!isNaN(F)) {
+        if (L_val < F * 0.8) {
+          M_val = -Math.round(((F * 0.92) - L_val) * 2);
+        } else if (L_val < F * 0.92) {
+          M_val = -Math.round((F * 0.92) - L_val);
+        } else {
+          M_val = 0;
+        }
+      } else {
+        M_val = 0;
+      }
+
+      let N_val = "";
+      if (!isNaN(F) && F !== 0) {
+        const ratio = L_val / F;
+        if (isFinite(ratio)) {
+          N_val = ratio < 1 ? String(Math.round(ratio * 10000) / 10000) : "無打折";
+        } else {
+          N_val = "";
+        }
+      } else {
+        N_val = "";
+      }
+
+      let O_val = "";
+      if (B === "1.自開發") O_val = 0.11;
+      else if (B === "2.公司單" || B === "3.薩爾文(公司單)") O_val = 0.05;
+      else if (B === "4.電訪中心(公司單)" || B === "5.電訪中心-薩爾文(公司單)") O_val = 0.08;
+      else O_val = "無";
+
+      let P_val = "";
+      if (typeof O_val === 'number') {
+        const raw = (L_val * O_val) + (M_val * O_val);
+        if (isFinite(raw)) {
+          let rounded;
+          if (raw >= 0) rounded = Math.floor(raw);
+          else rounded = Math.ceil(raw);
+          P_val = rounded;
+        } else {
+          P_val = "";
+        }
+      } else {
+        P_val = "";
+      }
+
+      $('E').value = (E_val === "" ? "" : fmtInt(E_val));
+      $('J').value = (J_val === "" ? "" : fmtInt(Number(J_val)));
+      $('L_val').textContent = isFinite(L_val) ? fmtInt(L_val) : "—";
+      $('M_val').textContent = isFinite(M_val) ? fmtInt(M_val) : "—";
+      $('N_val').textContent = (N_val === "" ? "—" : N_val);
+      $('O_val').textContent = (typeof O_val === 'number' ? (O_val*100).toFixed(2) + '%' : (O_val === "無" ? "無" : "—"));
+      $('P_val').textContent = (P_val === "" ? "—" : String(P_val));
+    }
+
+    document.addEventListener('keydown', function(e){
+      const active = document.activeElement;
+      if (!active) return;
+      const tag = active.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'select') {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+        if (e.key === 'Enter') { e.preventDefault(); calcOnce(); }
+      }
+    });
+
+    document.addEventListener('wheel', function(e){
+      const active = document.activeElement;
+      if (!active) return;
+      const tag = active.tagName.toLowerCase();
+      if (tag === 'input') e.preventDefault();
+    }, { passive: false });
+
+    function sanitizeIntegerInput(str, allowNegative=false) {
+      if (str === null || str === undefined) return '';
+      let s = String(str).replace(/[^\d\-]/g,'');
+      const neg = s.startsWith('-');
+      s = s.replace(/\-/g,'');
+      if (s === '') return '';
+      return (allowNegative && neg) ? ('-' + s) : s;
+    }
+
+    const intIds = ['A','C','D','F','G','K'];
+    intIds.forEach(id => {
+      const el = $(id);
+      if (!el) return;
+      el.addEventListener('input', function(){
+        const before = el.value;
+        const cleaned = sanitizeIntegerInput(before, false);
+        if (cleaned !== before) el.value = cleaned;
+      });
+      el.addEventListener('keydown', function(e){
+        const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'];
+        if (allowed.includes(e.key)) return;
+        if ((e.ctrlKey || e.metaKey) && ['a','c','v','x','A','C','V','X'].includes(e.key)) return;
+        if (!/^[0-9]$/.test(e.key)) e.preventDefault();
+      });
+    });
+
+    ['H','I'].forEach(id => {
+      const el = $(id);
+      if (!el) return;
+      el.addEventListener('input', function(){
+        const before = el.value;
+        const cleaned = sanitizeIntegerInput(before, true);
+        el.value = cleaned;
+      });
+      el.addEventListener('keydown', function(e){
+        const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End','-'];
+        if (allowed.includes(e.key)) return;
+        if ((e.ctrlKey || e.metaKey) && ['a','c','v','x','A','C','V','X'].includes(e.key)) return;
+        if (!/^[0-9]$/.test(e.key)) e.preventDefault();
+      });
+    });
+
+    document.getElementById('calcBtn').addEventListener('click', calcOnce);
+    document.getElementById('resetBtn').addEventListener('click', function(){
+      const ids = ['A','B','C','D','F','G','H','I','J','K','E'];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.tagName.toLowerCase() === 'select') el.selectedIndex = 0;
+        else el.value = '';
+      });
+      ['L_val','M_val','N_val','O_val','P_val'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '—';
+      });
+    });
+
+    ['C','D','F'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', function(){
+        const C = parseInteger($('C').value, false);
+        const D = parseInteger($('D').value, false);
+        const F = parseInteger($('F').value, false);
+        if (!isNaN(C) && !isNaN(D) && D !== 0 && !isNaN(F)) {
+          const tmp = (C / D) * F;
+          $('E').value = isFinite(tmp) ? fmtInt(Math.round(tmp)) : '';
+        } else {
+          $('E').value = '';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
